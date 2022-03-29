@@ -11,12 +11,12 @@ import (
 )
 
 type Printer struct {
-	number bool
+	lineNum bool
 }
 
 func (p Printer) Print(rownum int, line string) error {
 	var err error
-	if p.number {
+	if p.lineNum {
 		_, err = fmt.Fprintf(os.Stdout, "%6d\t%s\n", rownum, line)
 	} else {
 		_, err = fmt.Fprintln(os.Stdout, line)
@@ -29,38 +29,41 @@ type Line struct {
 	value  string
 }
 
-type LineCache struct {
+type OnlineSampler struct {
 	cache   []Line
 	size    int
 	counter float64
 }
 
-func newLineCache(size int) LineCache {
-	return LineCache{[]Line{}, size, 0}
+func newOnlineSampler(size int) OnlineSampler {
+	return OnlineSampler{[]Line{}, size, 0}
 }
 
-func (c *LineCache) Add(elem string) {
-	c.counter++
-	line := Line{int(c.counter), elem}
+// Uniformly at random add new lines to cache of size s.size
+//
+// See: https://stats.stackexchange.com/q/569647/35989
+func (s *OnlineSampler) Add(elem string) {
+	s.counter++
+	line := Line{int(s.counter), elem}
 
 	// seen < c.size items
-	if c.counter <= float64(c.size) {
-		c.cache = append(c.cache, line)
+	if s.counter <= float64(s.size) {
+		s.cache = append(s.cache, line)
 		return
 	}
 
 	// seen > c.size items, randomly replace with new ones
-	if rand.Float64() < (float64(c.size) / c.counter) {
-		i := rand.Intn(c.size)
-		c.cache[i] = line
+	if rand.Float64() < (float64(s.size) / s.counter) {
+		i := rand.Intn(s.size)
+		s.cache[i] = line
 	}
 }
 
-func (c LineCache) Lines() []Line {
-	sort.Slice(c.cache, func(i, j int) bool {
-		return c.cache[i].rownum < c.cache[j].rownum
+func (s OnlineSampler) Lines() []Line {
+	sort.Slice(s.cache, func(i, j int) bool {
+		return s.cache[i].rownum < s.cache[j].rownum
 	})
-	return c.cache
+	return s.cache
 }
 
 type Args struct {
@@ -126,7 +129,7 @@ func main() {
 	printer := Printer{args.lineNum}
 	rownum := 1
 
-	// using percentage option
+	// using the percentage option
 	if args.frac > 0 {
 		for scanner.Scan() {
 			if rand.Float64() < args.frac {
@@ -141,15 +144,15 @@ func main() {
 		return
 	}
 
-	// using number of lines option
-	cache := newLineCache(args.size)
+	// using the number of lines option
+	sampler := newOnlineSampler(args.size)
 	for scanner.Scan() {
 		line := scanner.Text()
-		cache.Add(line)
+		sampler.Add(line)
 	}
 
 	// print the collected lines
-	for _, line := range cache.Lines() {
+	for _, line := range sampler.Lines() {
 		printer.Print(line.rownum, line.value)
 	}
 }
