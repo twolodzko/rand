@@ -16,24 +16,33 @@ type Args struct {
 	number bool
 }
 
+type Printer struct {
+	number bool
+}
+
+func (p Printer) Print(rownum int, line string) error {
+	var err error
+	if p.number {
+		_, err = fmt.Fprintf(os.Stdout, "%6d\t%s\n", rownum, line)
+	} else {
+		_, err = fmt.Fprintln(os.Stdout, line)
+	}
+	return err
+}
+
 func main() {
-	var (
-		err    error
-		rownum int = 1
-	)
 	args := parseArgs()
 
 	rand.Seed(args.seed)
 
 	scanner := bufio.NewScanner(bufio.NewReader(args.file))
+	printer := Printer{args.number}
+	rownum := 1
+
 	for scanner.Scan() {
 		if rand.Float64() < args.frac {
 			line := scanner.Text()
-			if args.number {
-				_, err = fmt.Fprintf(os.Stdout, "%6d\t%s\n", rownum, line)
-			} else {
-				_, err = fmt.Fprintln(os.Stdout, line)
-			}
+			err := printer.Print(rownum, line)
 			if err != nil {
 				exit(err)
 			}
