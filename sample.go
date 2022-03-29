@@ -90,7 +90,7 @@ func parseArgs() Args {
 		fmt.Printf("  cat /etc/hosts | sample -p 50\n")
 	}
 
-	flag.IntVar(&size, "n", 10, "number of lines to sample")
+	flag.IntVar(&size, "n", 10, "number of lines to sample; ignored when -p is greater than 0")
 	flag.Float64Var(&frac, "p", 0, "percentage of rows (0-100) to keep; used instead of -n when -p is greater than 0")
 	flag.Int64Var(&seed, "r", time.Now().UnixNano(), "random seed, unix time be default")
 	flag.BoolVar(&lineNum, "l", false, "show line numbers")
