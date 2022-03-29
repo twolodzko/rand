@@ -55,16 +55,18 @@ func parseArgs() Args {
 		fmt.Println("Sample fraction of rows of the input")
 		fmt.Printf("\nUsage:\n  %s [OPTIONS]... [FILE]\n\n", os.Args[0])
 		flag.PrintDefaults()
+		fmt.Printf("\nExamples:\n\n")
+		fmt.Printf("  sample -p 50 -n /etc/hosts\n")
+		fmt.Printf("  cat /etc/hosts | sample -p 50\n")
 	}
 
-	flag.Float64Var(&frac, "p", 10, "percentage of rows to keep")
+	flag.Float64Var(&frac, "p", 10, "percentage of rows (0-100) to keep")
 	flag.Int64Var(&seed, "r", time.Now().UnixNano(), "random seed, unix time be default")
 	flag.BoolVar(&number, "n", false, "number the output lines")
 	flag.Parse()
 
 	if frac < 0 || frac > 100 {
-		fmt.Printf("fraction of rows needs to be a value between 0 and 100 (%%), got %v\n", frac)
-		os.Exit(1)
+		exit(fmt.Errorf("fraction of rows needs to be a value between 0 and 100 (%%), got %v", frac))
 	}
 
 	if flag.NArg() > 0 {
