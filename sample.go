@@ -9,12 +9,45 @@ import (
 	"time"
 )
 
+type Args struct {
+	file   *os.File
+	frac   float64
+	seed   int64
+	number bool
+}
+
 func main() {
 	var (
+		err    error
+		rownum int = 1
+	)
+	args := parseArgs()
+
+	rand.Seed(args.seed)
+
+	scanner := bufio.NewScanner(bufio.NewReader(args.file))
+	for scanner.Scan() {
+		if rand.Float64() < args.frac {
+			line := scanner.Text()
+			if args.number {
+				_, err = fmt.Fprintf(os.Stdout, "%6d\t%s\n", rownum, line)
+			} else {
+				_, err = fmt.Fprintln(os.Stdout, line)
+			}
+			if err != nil {
+				exit(err)
+			}
+		}
+		rownum++
+	}
+}
+
+func parseArgs() Args {
+	var (
+		file   *os.File
 		frac   float64
 		seed   int64
 		number bool
-		in     *os.File
 		err    error
 	)
 
@@ -24,8 +57,8 @@ func main() {
 		flag.PrintDefaults()
 	}
 
-	flag.Float64Var(&frac, "f", 10, "fraction (%) of rows to sample")
-	flag.Int64Var(&seed, "s", time.Now().UnixNano(), "random seed")
+	flag.Float64Var(&frac, "p", 10, "percentage of rows to keep")
+	flag.Int64Var(&seed, "r", time.Now().UnixNano(), "random seed, unix time be default")
 	flag.BoolVar(&number, "n", false, "number the output lines")
 	flag.Parse()
 
@@ -33,33 +66,17 @@ func main() {
 		fmt.Printf("fraction of rows needs to be a value between 0 and 100 (%%), got %v\n", frac)
 		os.Exit(1)
 	}
-	rand.Seed(seed)
 
 	if flag.NArg() > 0 {
-		in, err = os.Open(flag.Arg(0))
+		file, err = os.Open(flag.Arg(0))
 		if err != nil {
 			exit(err)
 		}
 	} else {
-		in = os.Stdin
+		file = os.Stdin
 	}
 
-	scanner := bufio.NewScanner(bufio.NewReader(in))
-	var row int
-	for scanner.Scan() {
-		row++
-		if rand.Float64() < frac/100 {
-			line := scanner.Text()
-			if number {
-				_, err = fmt.Fprintf(os.Stdout, "%6d\t%s\n", row, line)
-			} else {
-				_, err = fmt.Fprintln(os.Stdout, line)
-			}
-			if err != nil {
-				exit(err)
-			}
-		}
-	}
+	return Args{file, frac / 100, seed, number}
 }
 
 func exit(msg error) {

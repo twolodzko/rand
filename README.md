@@ -3,22 +3,28 @@ A command line utility that downsamples the rows of the input file. It works lik
 Example usage:
 
 ```shell
-$ sample -f 50 sample.go
+$ sample -p 10 sample.go
 func main() {
-   var (
-   )
-   }
-   flag.Parse()
-   }
-             } else {
-             }
+        "fmt"
+
+
+                        if args.number {
 }
-$ cat sample.go | sample -f 10
-   "fmt"
-        fmt.Println("Sample fraction of rows of the input")
-   flag.BoolVar(&number, "n", false, "number the output lines")
-   for scanner.Scan() {
-        if rand.Float64() < frac/100 {
-               _, err = fmt.Fprintln(os.Stdout, line)
-             }
+
+        flag.Usage = func() {
+                fmt.Println("Sample fraction of rows of the input")
+        }
+
+$ cat sample.go | sample -p 10
+        "fmt"
+        "os"
+        "time"
+
+        scanner := bufio.NewScanner(bufio.NewReader(args.file))
+                                _, err = fmt.Fprintln(os.Stdout, line)
+func parseArgs() Args {
+                seed   int64
+                err    error
+                fmt.Printf("fraction of rows needs to be a value between 0 and 100 (%%), got %v\n", frac)
+        }
 ```
