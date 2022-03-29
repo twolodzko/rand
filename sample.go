@@ -6,15 +6,9 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"sort"
 	"time"
 )
-
-type Args struct {
-	file   *os.File
-	frac   float64
-	seed   int64
-	number bool
-}
 
 type Printer struct {
 	number bool
@@ -30,48 +24,76 @@ func (p Printer) Print(rownum int, line string) error {
 	return err
 }
 
-func main() {
-	args := parseArgs()
+type Line struct {
+	rownum int
+	value  string
+}
 
-	rand.Seed(args.seed)
+type LineCache struct {
+	cache   []Line
+	size    int
+	counter float64
+}
 
-	scanner := bufio.NewScanner(bufio.NewReader(args.file))
-	printer := Printer{args.number}
-	rownum := 1
+func newLineCache(size int) LineCache {
+	return LineCache{[]Line{}, size, 0}
+}
 
-	for scanner.Scan() {
-		if rand.Float64() < args.frac {
-			line := scanner.Text()
-			err := printer.Print(rownum, line)
-			if err != nil {
-				exit(err)
-			}
-		}
-		rownum++
+func (c *LineCache) Add(elem string) {
+	c.counter++
+	line := Line{int(c.counter), elem}
+
+	// seen < c.size items
+	if c.counter <= float64(c.size) {
+		c.cache = append(c.cache, line)
+		return
 	}
+
+	// seen > c.size items, randomly replace with new ones
+	if rand.Float64() < (float64(c.size) / c.counter) {
+		i := rand.Intn(c.size)
+		c.cache[i] = line
+	}
+}
+
+func (c LineCache) Lines() []Line {
+	sort.Slice(c.cache, func(i, j int) bool {
+		return c.cache[i].rownum < c.cache[j].rownum
+	})
+	return c.cache
+}
+
+type Args struct {
+	file    *os.File
+	frac    float64
+	size    int
+	seed    int64
+	lineNum bool
 }
 
 func parseArgs() Args {
 	var (
-		file   *os.File
-		frac   float64
-		seed   int64
-		number bool
-		err    error
+		file    *os.File
+		frac    float64
+		size    int
+		seed    int64
+		lineNum bool
+		err     error
 	)
 
 	flag.Usage = func() {
 		fmt.Println("Sample fraction of rows of the input")
 		fmt.Printf("\nUsage:\n  %s [OPTIONS]... [FILE]\n\n", os.Args[0])
 		flag.PrintDefaults()
-		fmt.Printf("\nExamples:\n\n")
-		fmt.Printf("  sample -p 50 -n /etc/hosts\n")
+		fmt.Printf("\nExamples:\n")
+		fmt.Printf("  sample -l /etc/hosts\n")
 		fmt.Printf("  cat /etc/hosts | sample -p 50\n")
 	}
 
-	flag.Float64Var(&frac, "p", 10, "percentage of rows (0-100) to keep")
+	flag.IntVar(&size, "n", 10, "number of lines to sample")
+	flag.Float64Var(&frac, "p", 0, "percentage of rows (0-100) to keep; used instead of -n when -p is greater than 0")
 	flag.Int64Var(&seed, "r", time.Now().UnixNano(), "random seed, unix time be default")
-	flag.BoolVar(&number, "n", false, "number the output lines")
+	flag.BoolVar(&lineNum, "l", false, "show line numbers")
 	flag.Parse()
 
 	if frac < 0 || frac > 100 {
@@ -87,10 +109,47 @@ func parseArgs() Args {
 		file = os.Stdin
 	}
 
-	return Args{file, frac / 100, seed, number}
+	return Args{file, frac / 100, size, seed, lineNum}
 }
 
 func exit(msg error) {
 	fmt.Fprintln(os.Stderr, msg)
 	os.Exit(1)
+}
+
+func main() {
+	args := parseArgs()
+
+	rand.Seed(args.seed)
+
+	scanner := bufio.NewScanner(bufio.NewReader(args.file))
+	printer := Printer{args.lineNum}
+	rownum := 1
+
+	// using percentage option
+	if args.frac > 0 {
+		for scanner.Scan() {
+			if rand.Float64() < args.frac {
+				line := scanner.Text()
+				err := printer.Print(rownum, line)
+				if err != nil {
+					exit(err)
+				}
+			}
+			rownum++
+		}
+		return
+	}
+
+	// using number of lines option
+	cache := newLineCache(args.size)
+	for scanner.Scan() {
+		line := scanner.Text()
+		cache.Add(line)
+	}
+
+	// print the collected lines
+	for _, line := range cache.Lines() {
+		printer.Print(line.rownum, line.value)
+	}
 }
