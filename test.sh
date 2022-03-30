@@ -12,7 +12,7 @@ if [ "$( ./sample -n 15 sample.go | wc -l | cut -f1 -d" " )" -ne 15 ]; then
 fi
 
 if [ "$( ./sample -p 0.9 sample.go | wc -l | cut -f1 -d" " )" -le 10 ]; then
-    echo "sample -p 0.9 returned <10 lines"
+    echo "sample -p 0.9 returned <= 10 lines"
     exit 1
 fi
 
@@ -43,7 +43,12 @@ if [ "$( echo "$result" | uniq | wc -l )" -ne "$( echo "$result" | wc -l )" ]; t
 fi
 unset result
 
-if [ "$( ./sample -r 42 sample.go )" != "$( ./sample -r 42 sample.go )" ]; then
-    echo "fixing random seed didn't lead to identical results"
+if [ "$( ./sample -r 42 -n 10 sample.go )" != "$( ./sample -r 42 -n 10 sample.go )" ]; then
+    echo "fixing random seed didn't lead to identical results for sample -n"
+    exit 1
+fi
+
+if [ "$( ./sample -r 42 -p 0.5 sample.go )" != "$( ./sample -r 42 -p 0.5 sample.go )" ]; then
+    echo "fixing random seed didn't lead to identical results for sample -p"
     exit 1
 fi

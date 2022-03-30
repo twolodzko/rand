@@ -1,6 +1,8 @@
 
 freqs <- table(read.delim("result.data")[, 1])
 
+print(round(freqs / sum(freqs) * 100, 3))
+
 test <- chisq.test(freqs)
 print(test)
 

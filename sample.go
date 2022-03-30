@@ -14,7 +14,7 @@ type Printer struct {
 	showLineNum bool
 }
 
-func (p Printer) Print(lineNum int, line string) error {
+func (p Printer) Print(lineNum int64, line string) error {
 	var err error
 	if p.showLineNum {
 		_, err = fmt.Fprintf(os.Stdout, "%6d\t%s\n", lineNum, line)
@@ -25,7 +25,7 @@ func (p Printer) Print(lineNum int, line string) error {
 }
 
 type Line struct {
-	lineNum int
+	lineNum int64
 	value   string
 }
 
@@ -46,7 +46,7 @@ func newOnlineSampler(size int64) OnlineSampler {
 // https://en.wikipedia.org/wiki/Reservoir_sampling
 func (s *OnlineSampler) Add(elem string) {
 	s.counter++
-	line := Line{int(s.counter), elem}
+	line := Line{s.counter, elem}
 
 	// seen < s.size items
 	if s.counter <= s.size {
@@ -77,6 +77,10 @@ type Args struct {
 	seed        int64
 	showLineNum bool
 	file        *os.File
+}
+
+func (a Args) UseProb() bool {
+	return a.prob > 0
 }
 
 func parseArgs() (Args, error) {
@@ -135,11 +139,12 @@ func main() {
 
 	scanner := bufio.NewScanner(bufio.NewReader(args.file))
 	printer := Printer{args.showLineNum}
-	lineNum := 1
 
 	// using the percentage option
-	if args.prob > 0 {
+	var lineNum int64
+	if args.UseProb() {
 		for scanner.Scan() {
+			lineNum++
 			if rand.Float64() < args.prob {
 				line := scanner.Text()
 				err := printer.Print(lineNum, line)
@@ -147,7 +152,6 @@ func main() {
 					exit(err)
 				}
 			}
-			lineNum++
 		}
 		return
 	}
