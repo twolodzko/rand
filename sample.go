@@ -162,8 +162,6 @@ func main() {
 		line := scanner.Text()
 		sampler.Add(line)
 	}
-
-	// print the collected lines
 	for _, line := range sampler.Lines() {
 		printer.Print(line.lineNum, line.value)
 	}
