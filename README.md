@@ -2,6 +2,9 @@ A command line utility that downsamples the rows of the input file or Unix pipe.
 It works like Unix `cat` but dropping random rows, or like `head` or `tail` but
 taking random rows.
 
+To build it run the `make` command that needs [Go](https://go.dev/) installed.
+The `make test-samples` tests additionally use [R](https://cran.r-project.org/).
+
 **Usage example:**
 
 ```shell
