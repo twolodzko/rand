@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eu -o pipefail
 
 if [ "$( ./sample sample.go | wc -l |  cut -f1 -d" " )" -ne 10 ]; then
     echo "sample didn't return 10 lines"
