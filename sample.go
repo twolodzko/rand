@@ -11,13 +11,13 @@ import (
 )
 
 type Printer struct {
-	lineNum bool
+	showLineNum bool
 }
 
-func (p Printer) Print(rownum int, line string) error {
+func (p Printer) Print(lineNum int, line string) error {
 	var err error
-	if p.lineNum {
-		_, err = fmt.Fprintf(os.Stdout, "%6d\t%s\n", rownum, line)
+	if p.showLineNum {
+		_, err = fmt.Fprintf(os.Stdout, "%6d\t%s\n", lineNum, line)
 	} else {
 		_, err = fmt.Fprintln(os.Stdout, line)
 	}
@@ -25,63 +25,68 @@ func (p Printer) Print(rownum int, line string) error {
 }
 
 type Line struct {
-	rownum int
-	value  string
+	lineNum int
+	value   string
 }
 
 type OnlineSampler struct {
 	cache   []Line
-	size    int
-	counter float64
+	size    int64
+	counter int64
 }
 
-func newOnlineSampler(size int) OnlineSampler {
+func newOnlineSampler(size int64) OnlineSampler {
 	return OnlineSampler{[]Line{}, size, 0}
 }
 
 // Uniformly at random add new lines to cache of size s.size
 //
-// See: https://stats.stackexchange.com/q/569647/35989
+// See:
+// https://stats.stackexchange.com/q/569647/35989
+// https://en.wikipedia.org/wiki/Reservoir_sampling
 func (s *OnlineSampler) Add(elem string) {
 	s.counter++
 	line := Line{int(s.counter), elem}
 
-	// seen < c.size items
-	if s.counter <= float64(s.size) {
+	// seen < s.size items
+	if s.counter <= s.size {
 		s.cache = append(s.cache, line)
 		return
 	}
 
-	// seen > c.size items, randomly replace with new ones
-	if rand.Float64() < (float64(s.size) / s.counter) {
-		i := rand.Intn(s.size)
+	// seen > s.size items, randomly replace with new ones
+	// we use zero indexing, so i is sampled from [0, s.counter)
+	// if it falls into the [0, s.size) region we accept it as a new candidate
+	// this leads to sampling with probability s.size / s.counter
+	i := rand.Int63n(s.counter)
+	if i < s.size {
 		s.cache[i] = line
 	}
 }
 
 func (s OnlineSampler) Lines() []Line {
 	sort.Slice(s.cache, func(i, j int) bool {
-		return s.cache[i].rownum < s.cache[j].rownum
+		return s.cache[i].lineNum < s.cache[j].lineNum
 	})
 	return s.cache
 }
 
 type Args struct {
-	file    *os.File
-	prob    float64
-	size    int
-	seed    int64
-	lineNum bool
+	prob        float64
+	size        int64
+	seed        int64
+	showLineNum bool
+	file        *os.File
 }
 
 func parseArgs() (Args, error) {
 	var (
-		file    *os.File
-		prob    float64
-		size    int
-		seed    int64
-		lineNum bool
-		err     error
+		prob        float64
+		size        int64
+		seed        int64
+		showLineNum bool
+		err         error
+		file        *os.File
 	)
 
 	flag.Usage = func() {
@@ -93,10 +98,10 @@ func parseArgs() (Args, error) {
 		fmt.Printf("  cat /etc/hosts | sample -p 0.5\n")
 	}
 
-	flag.IntVar(&size, "n", 10, "number of lines to sample; ignored when -p is greater than 0")
+	flag.Int64Var(&size, "n", 10, "number of lines to sample; ignored when -p is greater than 0")
 	flag.Float64Var(&prob, "p", 0, "probability of keeping each row; used instead of -n when -p is greater than 0")
 	flag.Int64Var(&seed, "r", time.Now().UnixNano(), "random seed, unix time be default")
-	flag.BoolVar(&lineNum, "l", false, "show line numbers")
+	flag.BoolVar(&showLineNum, "l", false, "show line numbers")
 	flag.Parse()
 
 	if prob < 0 || prob > 1 {
@@ -112,7 +117,7 @@ func parseArgs() (Args, error) {
 		file = os.Stdin
 	}
 
-	return Args{file, prob, size, seed, lineNum}, nil
+	return Args{prob, size, seed, showLineNum, file}, nil
 }
 
 func exit(msg error) {
@@ -129,7 +134,7 @@ func main() {
 	rand.Seed(args.seed)
 
 	scanner := bufio.NewScanner(bufio.NewReader(args.file))
-	printer := Printer{args.lineNum}
+	printer := Printer{args.showLineNum}
 	rownum := 1
 
 	// using the percentage option
@@ -156,6 +161,6 @@ func main() {
 
 	// print the collected lines
 	for _, line := range sampler.Lines() {
-		printer.Print(line.rownum, line.value)
+		printer.Print(line.lineNum, line.value)
 	}
 }
