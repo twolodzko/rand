@@ -135,19 +135,19 @@ func main() {
 
 	scanner := bufio.NewScanner(bufio.NewReader(args.file))
 	printer := Printer{args.showLineNum}
-	rownum := 1
+	lineNum := 1
 
 	// using the percentage option
 	if args.prob > 0 {
 		for scanner.Scan() {
 			if rand.Float64() < args.prob {
 				line := scanner.Text()
-				err := printer.Print(rownum, line)
+				err := printer.Print(lineNum, line)
 				if err != nil {
 					exit(err)
 				}
 			}
-			rownum++
+			lineNum++
 		}
 		return
 	}
