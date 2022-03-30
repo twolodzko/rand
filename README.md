@@ -16,7 +16,7 @@ $ sample -l sample.go
    141                  return
    144          // using number of lines option
    150
-$ cat sample.go | sample -p 10   
+$ cat sample.go | sample -p 0.1   
 import (
         "sort"
 type Printer struct {

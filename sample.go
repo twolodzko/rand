@@ -68,16 +68,16 @@ func (s OnlineSampler) Lines() []Line {
 
 type Args struct {
 	file    *os.File
-	frac    float64
+	prob    float64
 	size    int
 	seed    int64
 	lineNum bool
 }
 
-func parseArgs() Args {
+func parseArgs() (Args, error) {
 	var (
 		file    *os.File
-		frac    float64
+		prob    float64
 		size    int
 		seed    int64
 		lineNum bool
@@ -85,34 +85,34 @@ func parseArgs() Args {
 	)
 
 	flag.Usage = func() {
-		fmt.Println("Sample fraction of rows of the input")
+		fmt.Println("Randomly downsample the rows of the input")
 		fmt.Printf("\nUsage:\n  %s [OPTIONS]... [FILE]\n\n", os.Args[0])
 		flag.PrintDefaults()
 		fmt.Printf("\nExamples:\n")
 		fmt.Printf("  sample -l /etc/hosts\n")
-		fmt.Printf("  cat /etc/hosts | sample -p 50\n")
+		fmt.Printf("  cat /etc/hosts | sample -p 0.5\n")
 	}
 
 	flag.IntVar(&size, "n", 10, "number of lines to sample; ignored when -p is greater than 0")
-	flag.Float64Var(&frac, "p", 0, "percentage of rows (0-100) to keep; used instead of -n when -p is greater than 0")
+	flag.Float64Var(&prob, "p", 0, "probability of keeping each row; used instead of -n when -p is greater than 0")
 	flag.Int64Var(&seed, "r", time.Now().UnixNano(), "random seed, unix time be default")
 	flag.BoolVar(&lineNum, "l", false, "show line numbers")
 	flag.Parse()
 
-	if frac < 0 || frac > 100 {
-		exit(fmt.Errorf("fraction of rows needs to be a value between 0 and 100 (%%), got %v", frac))
+	if prob < 0 || prob > 1 {
+		return Args{}, fmt.Errorf("probability needs to be a value between 0 and 1, got %v", prob)
 	}
 
 	if flag.NArg() > 0 {
 		file, err = os.Open(flag.Arg(0))
 		if err != nil {
-			exit(err)
+			return Args{}, err
 		}
 	} else {
 		file = os.Stdin
 	}
 
-	return Args{file, frac / 100, size, seed, lineNum}
+	return Args{file, prob, size, seed, lineNum}, nil
 }
 
 func exit(msg error) {
@@ -121,7 +121,10 @@ func exit(msg error) {
 }
 
 func main() {
-	args := parseArgs()
+	args, err := parseArgs()
+	if err != nil {
+		exit(err)
+	}
 
 	rand.Seed(args.seed)
 
@@ -130,9 +133,9 @@ func main() {
 	rownum := 1
 
 	// using the percentage option
-	if args.frac > 0 {
+	if args.prob > 0 {
 		for scanner.Scan() {
-			if rand.Float64() < args.frac {
+			if rand.Float64() < args.prob {
 				line := scanner.Text()
 				err := printer.Print(rownum, line)
 				if err != nil {
