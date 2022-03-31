@@ -98,8 +98,8 @@ func parseArgs() (Args, error) {
 		fmt.Printf("\nUsage:\n  %s [OPTIONS]... [FILE]\n\n", os.Args[0])
 		flag.PrintDefaults()
 		fmt.Print("\nExamples:\n")
-		fmt.Print("  sample -l /etc/hosts\n")
-		fmt.Print("  cat /etc/hosts | sample -p 0.5\n")
+		fmt.Printf("  %s -l /etc/hosts\n", os.Args[0])
+		fmt.Printf("  cat /etc/hosts | %s -p 0.5\n", os.Args[0])
 	}
 
 	flag.Int64Var(&size, "n", 10, "number of lines to sample; ignored when -p is greater than 0")
