@@ -8,7 +8,7 @@ The `make test-samples` tests additionally use [R](https://cran.r-project.org/).
 **Usage example:**
 
 ```shell
-$ sample -l sample.go
+$ rand -l main.go
     50          }
     52          // seen > c.size items, randomly replace with new ones
     54                  i := rand.Intn(c.size)
@@ -19,7 +19,7 @@ $ sample -l sample.go
    141                  return
    144          // using number of lines option
    150
-$ cat sample.go | sample -p 0.1   
+$ cat main.go | rand -p 0.1   
 import (
         "sort"
 type Printer struct {
