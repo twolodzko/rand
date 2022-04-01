@@ -6,8 +6,10 @@ rand: main.go
 
 .PHONY: test
 test: rand
-	@ time for _ in {1..100}; do \
+	@ echo "Running tests:"
+	@ time for i in {1..100}; do \
 		bash test.sh; \
+		printf "%3d%% exit status: %s\n" $$i $$? ; \
 	done
 
 .PHONY: test-samples
