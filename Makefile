@@ -6,7 +6,7 @@ rand: main.go
 
 .PHONY: test
 test: rand
-	@ for _ in {1..100}; do \
+	@ time for _ in {1..100}; do \
 		bash test.sh; \
 	done
 
